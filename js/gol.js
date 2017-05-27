@@ -1,16 +1,27 @@
 /**
  * Game of Life simulation and display.
  * @param {HTMLCanvasElement} canvas Render target
- * @param {number} [scale] Size of each cell in pixels (power of 2)
+ * @param {number} [scalePower] Size of each cell in pixels (as a power of 2)
+ * @param {number} [interval] millis delay between each frame
  */
-function GOL(canvas, scale) {
+function GOL(canvas, config) {
+    const defaultConfig = { scalePower : 2, interval : 60 };
+    const combinedConfig = Object.assign({}, defaultConfig, config);
+
+    this.canvas = canvas;
     var igloo = this.igloo = new Igloo(canvas);
     var gl = igloo.gl;
     if (gl == null) {
         alert('Could not initialize WebGL!');
         throw new Error('No WebGL');
     }
-    scale = this.scale = scale || 4;
+    this.combinedConfig = combinedConfig;
+    this.scalePower = combinedConfig.scalePower;
+    this.scale = Math.pow(2, this.scalePower);
+
+    const scale = this.scale;
+    this.interval = combinedConfig.interval;
+
     var w = canvas.width, h = canvas.height;
     this.viewsize = new Float32Array([w, h]);
     this.statesize = new Float32Array([w / scale, h / scale]);
@@ -35,7 +46,6 @@ function GOL(canvas, scale) {
     this.framebuffers = {
         step: igloo.framebuffer()
     };
-    this.setRandom();
 }
 
 /**
@@ -207,10 +217,11 @@ GOL.prototype.get = function() {
  */
 GOL.prototype.start = function() {
     if (this.timer == null) {
+      const gol = this;
         this.timer = setInterval(function(){
             gol.step();
             gol.draw();
-        }, 60);
+        }, this.interval);
     }
     return this;
 };
@@ -256,18 +267,31 @@ GOL.prototype.eventCoord = function(event) {
  */
 function Controller(gol) {
     this.gol = gol;
+    gol.setRandom();
+    gol.draw()
+    gol.start();
+
     var _this = this,
         $canvas = $(gol.igloo.canvas);
     this.drag = null;
+
+    function updateEvent(element, name, fn) {
+      element.off(name);
+      element.on(name, fn);
+    }
+
+    $canvas.off('mousedown');
     $canvas.on('mousedown', function(event) {
         _this.drag = event.which;
         var pos = gol.eventCoord(event);
         gol.poke(pos[0], pos[1], _this.drag == 1);
         gol.draw();
     });
+    $canvas.off('mouseup');
     $canvas.on('mouseup', function(event) {
         _this.drag = null;
     });
+    $canvas.off('mousemove');
     $canvas.on('mousemove', function(event) {
         if (_this.drag) {
             var pos = gol.eventCoord(event);
@@ -275,10 +299,12 @@ function Controller(gol) {
             gol.draw();
         }
     });
+    $canvas.off('contextmenu');
     $canvas.on('contextmenu', function(event) {
         event.preventDefault();
         return false;
     });
+    $(document).off('keyup');
     $(document).on('keyup', function(event) {
         switch (event.which) {
         case 82: /* r */
@@ -299,16 +325,41 @@ function Controller(gol) {
                 this._save = gol.get();
             }
             break;
+        case 188: /* [comma] */
+            gol.interval = gol.interval * 2;
+            gol.stop();
+            gol.start();
+            break;
+        case 190: /* [period] */
+            gol.interval = Math.ceil(gol.interval / 2);
+            gol.stop();
+            gol.start();
+            break;
+        case 189: /* [dash] */
+            if ((gol.scalePower - 1) >= 0) {
+              gol.stop();
+              gol.setEmpty();
+              const newGol = new GOL(gol.canvas, { scalePower : (gol.scalePower - 1), interval : gol.interval } );
+              new Controller(newGol);
+            }
+            break;
+        case 187: /* [equals] */
+          if ((gol.scalePower + 1) <= 6) {
+              gol.stop();
+              gol.setEmpty();
+              const newGol = new GOL(gol.canvas, { scalePower : (gol.scalePower + 1), interval : gol.interval } );
+              new Controller(newGol);
+            }
+            break;
         };
     });
 }
 
 /* Initialize everything. */
-var gol = null, controller = null;
 $(document).ready(function() {
     var $canvas = $('#life');
-    gol = new GOL($canvas[0]).draw().start();
-    controller = new Controller(gol);
+    let gol = new GOL($canvas[0], { scalePower : 2, interval : 60 } );
+    new Controller(gol);
 });
 
 /* Don't scroll on spacebar. */
