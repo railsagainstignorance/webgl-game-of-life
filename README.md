@@ -14,3 +14,4 @@ This fork:
 * added controls to dynamically
    * inc/dec cell Size
    * inc/dec interval between frames
+* added dynamic stats for updating and drawing each iteration
