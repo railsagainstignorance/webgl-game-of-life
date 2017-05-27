@@ -46,7 +46,18 @@ function GOL(canvas, config) {
     this.framebuffers = {
         step: igloo.framebuffer()
     };
+
+    this.timings = {};
+    this.numSteps = 0;
+    this.everyNSteps = 100;
 }
+
+/**
+ * @returns {number} The epoch in milliseconds
+ */
+GOL.nowMillis = function() {
+    return Date.now();
+};
 
 /**
  * @returns {number} The epoch in integer seconds
@@ -85,6 +96,43 @@ GOL.expand = function(buffer) {
         state[i] = (compact[ii] >> shift) & 1;
     }
     return state;
+};
+
+/**
+ * calc timings stats.
+ * @param {number} interval average over last few
+ * @returns {GOL} this
+ */
+
+GOL.prototype.calcTimingsStats = function(everyNSteps) {
+    const stats = [`timings in millis, averaged over ${everyNSteps} steps:`, ''];
+    Object.keys(this.timings).forEach( k => {
+      const timingsOverInterval = this.timings[k].slice(- everyNSteps);
+      const sum = timingsOverInterval.reduce( ( acc, cur ) => acc + cur, 0 );
+      const divisor = (timingsOverInterval.length > 0) ? timingsOverInterval.length : 1;
+      const avg = sum / divisor;
+      stats.push(`${k}=${avg}`);
+    });
+    $('.timings').html(stats.join('<BR>'));
+    return this;
+};
+
+/**
+ * time one fn call.
+ * @param {string} name name of action to be timed
+ * @param {function} fn action to be timed
+ * @returns {GOL} this
+ */
+
+GOL.prototype.timeFn = function(name, fn) {
+  const beginTiming = GOL.nowMillis();
+  fn();
+  const endTiming = GOL.nowMillis();
+  if (! this.timings.hasOwnProperty(name)) {
+    this.timings[name] = [];
+  }
+  this.timings[name].push(endTiming - beginTiming);
+  return this;
 };
 
 /**
@@ -145,23 +193,31 @@ GOL.prototype.swap = function() {
  * @returns {GOL} this
  */
 GOL.prototype.step = function() {
-    if (GOL.now() != this.lasttick) {
-        $('.fps').text(this.fps + ' FPS');
-        this.lasttick = GOL.now();
-        this.fps = 0;
-    } else {
-        this.fps++;
+    this.numSteps ++;
+    this.timeFn('step', () => {
+      if (GOL.now() != this.lasttick) {
+          $('.fps').text(this.fps + ' FPS');
+          this.lasttick = GOL.now();
+          this.fps = 0;
+      } else {
+          this.fps++;
+      }
+      var gl = this.igloo.gl;
+      this.framebuffers.step.attach(this.textures.back);
+      this.textures.front.bind(0);
+      gl.viewport(0, 0, this.statesize[0], this.statesize[1]);
+      this.programs.gol.use()
+          .attrib('quad', this.buffers.quad, 2)
+          .uniformi('state', 0)
+          .uniform('scale', this.statesize)
+          .draw(gl.TRIANGLE_STRIP, 4);
+      this.swap();
+    });
+
+    if ((this.numSteps % this.everyNSteps) == 0) {
+      this.calcTimingsStats(this.everyNSteps);
     }
-    var gl = this.igloo.gl;
-    this.framebuffers.step.attach(this.textures.back);
-    this.textures.front.bind(0);
-    gl.viewport(0, 0, this.statesize[0], this.statesize[1]);
-    this.programs.gol.use()
-        .attrib('quad', this.buffers.quad, 2)
-        .uniformi('state', 0)
-        .uniform('scale', this.statesize)
-        .draw(gl.TRIANGLE_STRIP, 4);
-    this.swap();
+
     return this;
 };
 
@@ -170,15 +226,17 @@ GOL.prototype.step = function() {
  * @returns {GOL} this
  */
 GOL.prototype.draw = function() {
-    var gl = this.igloo.gl;
-    this.igloo.defaultFramebuffer.bind();
-    this.textures.front.bind(0);
-    gl.viewport(0, 0, this.viewsize[0], this.viewsize[1]);
-    this.programs.copy.use()
-        .attrib('quad', this.buffers.quad, 2)
-        .uniformi('state', 0)
-        .uniform('scale', this.viewsize)
-        .draw(gl.TRIANGLE_STRIP, 4);
+  this.timeFn('draw', () => {
+      var gl = this.igloo.gl;
+      this.igloo.defaultFramebuffer.bind();
+      this.textures.front.bind(0);
+      gl.viewport(0, 0, this.viewsize[0], this.viewsize[1]);
+      this.programs.copy.use()
+          .attrib('quad', this.buffers.quad, 2)
+          .uniformi('state', 0)
+          .uniform('scale', this.viewsize)
+          .draw(gl.TRIANGLE_STRIP, 4);
+      });
     return this;
 };
 
@@ -331,7 +389,7 @@ function Controller(gol) {
             gol.start();
             break;
         case 190: /* [period] */
-            gol.interval = Math.ceil(gol.interval / 2);
+            gol.interval = Math.floor(gol.interval / 2);
             gol.stop();
             gol.start();
             break;

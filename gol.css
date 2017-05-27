@@ -35,16 +35,9 @@ div.description {
     text-align: justify;
 }
 
-.fps {
-    position: absolute;
-    top: 0;
-    right: 0;
-    color: #444;
+.fps, .timings {
+    color: white;
     font-size: 12px;
-}
-
-ul li span {
-    display: inline-block;
 }
 
 ul {
@@ -52,14 +45,38 @@ ul {
     color: pink;
 }
 
+ul li {
+  display: -ms-flex;
+  display: -webkit-flex;
+  display: flex;
+}
+
 ul li .input {
     text-align: right;
-    width: 250px;
     font-weight: bold;
+    width: 40%;
+    padding: 10px;
 }
 
 ul li .result {
     text-align: left;
-    width: 250px;
     font-style: italic;
+    width: 60%;
+    padding: 10px;
+}
+
+.cols {
+  display: -ms-flex;
+  display: -webkit-flex;
+  display: flex;
+}
+
+.colbig {
+  width: 70%;
+  padding: 10px;
+}
+
+.colsmall {
+  width: 30%;
+  padding: 10px;
 }
