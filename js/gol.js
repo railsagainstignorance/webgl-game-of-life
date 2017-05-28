@@ -387,7 +387,7 @@ function Controller(gol) {
             }
             break;
         case 188: /* [comma] */
-            gol.interval = gol.interval * 2;
+            gol.interval = (gol.interval==0)? 1 : gol.interval * 2;
             $('.interval').text(`interval=${gol.interval}`);
             gol.stop();
             gol.start();
