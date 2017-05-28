@@ -10,7 +10,7 @@ int get(vec2 offset) {
 }
 
 void main() {
-    int sum =
+    int sumNhbrs =
         get(vec2(-1.0, -1.0)) +
         get(vec2(-1.0,  0.0)) +
         get(vec2(-1.0,  1.0)) +
@@ -19,12 +19,9 @@ void main() {
         get(vec2( 1.0, -1.0)) +
         get(vec2( 1.0,  0.0)) +
         get(vec2( 1.0,  1.0));
-    if (sum == 3) {
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-    } else if (sum == 2) {
-        float current = float(get(vec2(0.0, 0.0)));
-        gl_FragColor = vec4(current, current, current, 1.0);
-    } else {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    }
+    int centre =
+        get(vec2( 0.0,  0.0));
+
+    float value = (sumNhbrs == 3 || (centre == 1 && sumNhbrs == 2))? 1.0 : 0.0;
+    gl_FragColor = vec4(value, value, value, 1.0);
 }
