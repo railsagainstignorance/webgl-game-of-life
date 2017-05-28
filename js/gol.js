@@ -50,6 +50,9 @@ function GOL(canvas, config) {
     this.timings = {};
     this.numSteps = 0;
     this.everyNSteps = 100;
+
+    $('.cell-size').text(`cell-size=${this.scale}`);
+    $('.interval').text(`interval=${this.interval}`);
 }
 
 /**
@@ -385,11 +388,13 @@ function Controller(gol) {
             break;
         case 188: /* [comma] */
             gol.interval = gol.interval * 2;
+            $('.interval').text(`interval=${gol.interval}`);
             gol.stop();
             gol.start();
             break;
         case 190: /* [period] */
             gol.interval = Math.floor(gol.interval / 2);
+            $('.interval').text(`interval=${gol.interval}`);
             gol.stop();
             gol.start();
             break;
@@ -399,6 +404,7 @@ function Controller(gol) {
               gol.setEmpty();
               const newGol = new GOL(gol.canvas, { scalePower : (gol.scalePower - 1), interval : gol.interval } );
               new Controller(newGol);
+              $('.cell-size').text(`cell-size=${newGol.scale}`);
             }
             break;
         case 187: /* [equals] */
@@ -407,6 +413,7 @@ function Controller(gol) {
               gol.setEmpty();
               const newGol = new GOL(gol.canvas, { scalePower : (gol.scalePower + 1), interval : gol.interval } );
               new Controller(newGol);
+              $('.cell-size').text(`cell-size=${newGol.scale}`);
             }
             break;
         };
